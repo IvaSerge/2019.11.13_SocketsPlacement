@@ -1,0 +1,34 @@
+import clr
+clr.AddReference('RevitAPI')
+import Autodesk
+from Autodesk.Revit.DB import *
+
+clr.AddReference('ProtoGeometry')
+from Autodesk.DesignScript.Geometry import *
+
+
+info = IN[0]
+reload = IN[1]
+
+info.pop(0)
+
+for i in info:
+	 
+	#инфо из списка
+	rvt_fName = i[8]
+	rvt_tName = i[9]
+	rvt_lvl = i[10]
+	rvt_h = i[11]
+	rvt_x = i[4]
+	rvt_x = i[5]
+	rvt_rot = i[6]	
+	
+	#Найти в проекте семейство и тип
+	
+	#Преобразовать координаты и вставить по ним семейство
+	
+	#Развернуть семейство
+	
+	#Вписать информацию в семейство
+	
+OUT = rvt_lvl
