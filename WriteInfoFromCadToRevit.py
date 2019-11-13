@@ -16,6 +16,8 @@ from RevitServices.Persistence import DocumentManager
 from RevitServices.Transactions import TransactionManager
 doc = DocumentManager.Instance.CurrentDBDocument
 
+import math
+
 def mm_to_ft(mm):
 	return 3.2808*mm/1000
 
@@ -50,6 +52,8 @@ class rvtElem:
 		self.rvtType = self._getType()
 		self.rvtLvl = self._getLevel()
 		self.rvtIns = self._newIns()
+		
+		self._setRotation()
 
 	def _getType(self): 
 		"""Найти в проекте семейство и тип"""
@@ -81,7 +85,7 @@ class rvtElem:
 			.WherePasses(filterC)\
 			.FirstElement()
 		return rvtLvl
-	
+
 	def _newIns(self):
 		pt = XYZ(self.x, self.y, 0)
 		tp = self.rvtType
@@ -92,6 +96,15 @@ class rvtElem:
 		str = Structure.StructuralType.NonStructural
 		elem = self.doc.Create.NewFamilyInstance(pt, tp, lvl, str)
 		return elem
+	
+	def _setRotation(self):
+		global doc
+		pnt1 = self.rvtIns.Location.Point
+		pnt2 = XYZ(pnt1.X, pnt1.Y, pnt1.Z + 10)
+		axis = Line.CreateBound(pnt1, pnt2)
+		ang = self.rotation * math.pi/180 -  math.pi/2
+		ElementTransformUtils.RotateElement(doc, self.rvtIns.Id, axis, ang)
+
 
 info = IN[0]
 reload = IN[1]
@@ -104,4 +117,4 @@ rvtObj = [rvtElem(i) for i in info]
 #Вписать информацию в семейство
 TransactionManager.Instance.EnsureInTransaction(doc)
 
-OUT = map(lambda x:x.rvtIns, rvtObj)
+OUT = map(lambda x:x.rotation, rvtObj)
