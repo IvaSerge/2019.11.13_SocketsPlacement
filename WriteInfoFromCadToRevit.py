@@ -67,11 +67,8 @@ class rvtElem:
 		self.rvtType = self._getType()
 		self.rvtLvl = self._getLevel()
 		self.Pclass = self._getElClass(i[14])
-		
-		#Создание элемента
-		self.rvtIns = self._newIns()
-		self._setRotation()
-		self._setParameters()
+		self.rvtIns = None
+
 
 	def _getType(self): 
 		"""Найти в проекте семейство и тип"""
@@ -102,6 +99,8 @@ class rvtElem:
 			.OfCategory(BuiltInCategory.OST_Levels)\
 			.WherePasses(filterC)\
 			.FirstElement()
+		if not rvtLvl:
+			raise ValueError("No correct level found")
 		return rvtLvl
 
 	def _getElClass(self, className):
@@ -111,7 +110,7 @@ class rvtElem:
 		rvtClass = [i for i in rvtClass if i.Name == className][0]
 		return rvtClass
 		
-	def _newIns(self):
+	def newIns(self):
 		"""Создание нового объекта"""
 		pt = XYZ(self.x, self.y, 0)
 		tp = self.rvtType
@@ -119,12 +118,16 @@ class rvtElem:
 			tp.Activate()
 			doc.Regenerate()
 		lvl = self.rvtLvl
+		if not(lvl):
+			raise ValueError("No correct level found")
+			return None
 		str = Structure.StructuralType.NonStructural
 		elem = self.doc.Create.NewFamilyInstance(pt, tp, lvl, str)
 		doc.Regenerate()
+		self.rvtIns = elem
 		return elem
 
-	def _setRotation(self):
+	def setRotation(self):
 		"""Корректировка угла поворота"""
 		global doc
 		pnt1 = self.rvtIns.Location.Point
@@ -133,7 +136,7 @@ class rvtElem:
 		ang = self.rotation * math.pi/180 -  math.pi/2
 		ElementTransformUtils.RotateElement(doc, self.rvtIns.Id, axis, ang)
 
-	def _setParameters(self):
+	def setParameters(self):
 		elem = self.rvtIns
 		SetupParVal(elem, "INSTANCE_FREE_HOST_OFFSET_PARAM", self.h)
 		SetupParVal(elem, "Р_уст", self.P)
@@ -147,13 +150,17 @@ class rvtElem:
 info = IN[0]
 reload = IN[1]
 info.pop(0)
+errorList = list()
 
 #Начало транзакции
 TransactionManager.Instance.EnsureInTransaction(doc)
 
 rvtObj = [rvtElem(i) for i in info]
+map(lambda x:x.newIns(), rvtObj)
+map(lambda x:x.setRotation, rvtObj)
+map(lambda x:x.setParameters, rvtObj)
 
 #Окончание транзакции
 TransactionManager.Instance.EnsureInTransaction(doc)
 
-OUT = zip(map(lambda x:x.Pclass, rvtObj))
+OUT = zip(map(lambda x:x.rvtIns, rvtObj))
