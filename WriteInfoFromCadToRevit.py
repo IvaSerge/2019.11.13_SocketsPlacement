@@ -56,10 +56,13 @@ class rvtElem:
 		self.h = mm_to_ft(i[11])
 		self.x = mm_to_ft(float(i[4]))
 		self.y = mm_to_ft(float(i[5]))
-		self.rotation = i[6]
+		self.rotation = float(i[6])
 		self.P = UnitUtils.ConvertToInternalUnits(
 					i[12],DisplayUnitType.DUT_WATTS)
+		
 		self.cos = float(i[13])
+		if self.cos > 1:
+			raise ValueError("Power factor overflow")
 		
 		#Revit elements
 		global doc
@@ -86,6 +89,8 @@ class rvtElem:
 			.OfClass(FamilySymbol)\
 			.WherePasses(filterAnd)\
 			.FirstElement()
+		if not rvtType:
+			raise ValueError("Family Type not found")
 		return rvtType
 
 	def _getLevel(self): 
@@ -107,7 +112,10 @@ class rvtElem:
 		rvtClass = FilteredElementCollector(self.doc)\
 			.OfCategory(BuiltInCategory.OST_ElectricalLoadClassifications)\
 			.ToElements()
-		rvtClass = [i for i in rvtClass if i.Name == className][0]
+		try:
+			rvtClass = [i for i in rvtClass if i.Name == className][0]
+		except:
+			raise ValueError("LoadClass not fount")
 		return rvtClass
 		
 	def newIns(self):
@@ -118,9 +126,6 @@ class rvtElem:
 			tp.Activate()
 			doc.Regenerate()
 		lvl = self.rvtLvl
-		if not(lvl):
-			raise ValueError("No correct level found")
-			return None
 		str = Structure.StructuralType.NonStructural
 		elem = self.doc.Create.NewFamilyInstance(pt, tp, lvl, str)
 		doc.Regenerate()
@@ -133,8 +138,9 @@ class rvtElem:
 		pnt1 = self.rvtIns.Location.Point
 		pnt2 = XYZ(pnt1.X, pnt1.Y, pnt1.Z + 10)
 		axis = Line.CreateBound(pnt1, pnt2)
-		ang = self.rotation * math.pi/180 -  math.pi/2
+		ang = self.rotation * math.pi/180 - math.pi/2
 		ElementTransformUtils.RotateElement(doc, self.rvtIns.Id, axis, ang)
+		doc.Regenerate()
 
 	def setParameters(self):
 		elem = self.rvtIns
@@ -157,8 +163,8 @@ TransactionManager.Instance.EnsureInTransaction(doc)
 
 rvtObj = [rvtElem(i) for i in info]
 map(lambda x:x.newIns(), rvtObj)
-map(lambda x:x.setRotation, rvtObj)
-map(lambda x:x.setParameters, rvtObj)
+map(lambda x:x.setRotation(), rvtObj)
+map(lambda x:x.setParameters(), rvtObj)
 
 #Окончание транзакции
 TransactionManager.Instance.EnsureInTransaction(doc)
